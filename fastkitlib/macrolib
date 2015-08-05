@@ -1,0 +1,1020 @@
+#**********************************************************
+# User defined kermit macroses - macrolib for the FASTkit
+#**********************************************************
+
+#******** Global return values for all macrolib ***********
+#define OK 0
+#define FAIL 1
+
+#**********************************************************
+# mantis kermit macro
+#
+# Macro connects to the mantis
+#
+# Parameter in: none
+# Parameter out: none
+# Return value: always OK
+# Example: cc and then press Enter
+#**********************************************************
+define mantis {
+	run \v(browser) https://eld-mantis1/mantis-local/view_all_bug_page.php\?page_number=1 &
+	
+	return OK
+}
+
+#**********************************************************
+# mantis kermit macro
+#
+# Macro connects to the mantis
+#
+# Parameter in: none
+# Parameter out: none
+# Return value: always OK
+# Example: cc and then press Enter
+#**********************************************************
+define bugzilla {
+	run \v(browser) http://ste-bugzilla1/software/ &
+	
+	return OK
+}
+
+#**********************************************************
+# cc kermit macro
+#
+# Macro makes lineout and then enter the C-Kermit in the 
+# connect mode
+# 
+# Parameter in: none
+# Parameter out: none
+# Return value: none
+# Example: cc and then press Enter
+#**********************************************************
+define cc {
+	do echo_info "Opening the connection \o33[7;47m\v(line)\o33[m..."
+	lineout
+	connect
+}
+
+#**********************************************************
+# cc kermit macro
+#
+# Macro makes lineout and then enter the C-Kermit in the 
+# connect mode
+# 
+# Parameter in: none
+# Parameter out: none
+# Return value: none
+# Example: cc and then press Enter
+#**********************************************************
+define ee {
+	do echo_info "Closing the connection \o33[7;47m\v(line)\o33[m..."
+	do echo_info "Exiting FASTkit..."
+	
+	close
+
+	exit
+}
+
+#**********************************************************
+# updatekit kermit macro
+#
+# Macro updates FASTkit in the $FASTKIT_INSTALL_DIR from the
+# $FASTKIT_SOURCE_DIR whilst the FASTkit itself is running
+# 
+# Parameter in: none
+# Parameter out: none
+# Return value: either OK or FAIL
+# Example: do updatekit
+#**********************************************************
+define updatekit {
+	# TODO: add possbility to update FASTkit from the FactoryApp VOB
+	# without running FactoryApp build system e.g. make commands
+
+	local \&a 	# array to store the names of the files
+	local n 	# number of files in the directory
+	local r 	# return value
+	local d 	# number of directories in the install directory
+	local \&f	# array of directories
+
+	.r := OK
+
+	local \s(sharedir)
+	local \s(installdir)
+
+
+
+	# begin bash script here
+	.sharedir := \Frawcommand(UPDIR=$(cat .bashrc | sed -n -e '/^FASTKIT_SHARE_DIR=/{p;}'); echo -n ${UPDIR#FASTKIT_SHARE_DIR=*})
+	.installdir := \Frawcommand(INSDIR=$(cat .bashrc | sed -n -e '/^FASTKIT_INSTALL_DIR=/{p;}'); echo -n ${INSDIR#FASTKIT_INSTALL_DIR=*})
+
+	echo "Update dir - \s(sharedir)\10
+		\13Install dir - \s(installdir)"
+
+	.d := \Fdirectories(\s(sharedir)/*,&f)
+
+	FOR t 1 \m(d) 1 {
+		echo "The directories are - \&f[d]"
+		#copy /list /overwrite:newer /preserve \&f[d] \s(installdir)
+		#.n := \Ffiles(\&f[t]/*,&a)
+		#FOR p 1 \m(n) 1 {		
+		#}	
+	}
+
+	# Performing the searching and installing the clearcase view
+	# for updating the FASTkit lib within the FASTkit
+
+	#do echo_info "The total number of files in the \$(FASTKIT_INSTALL_DIR) directory is \m(n)"
+	#do echo_info "The files in the \$(FASTKIT_INSTALL_DIR) directory are:"
+
+	#FOR t 1 \m(d) 1 {
+
+		#.n := \Ffiles(\$(FASTKIT_INSTALL_DIR),&a)
+		
+		#FOR q 1 \m(n) 1 {
+	
+		#	do echo_info "\o33[7;47m\&a[t]\o33[m"
+		#	take \&a[t]
+		#	if success {
+		#		continue
+		#	} else {
+		#		do echo_fail "Cannot update the file \o33[7;47m\&a[t]\o33[m"
+		#		.r := FAIL
+		#		break
+		#	}
+		#}
+	#}
+
+	if != \m(r) FAIL {
+		do echo_ok "FASTkit updated successfully"
+	} else {
+		do echo_fail "Fail to update FASTkit"
+	}
+	
+	return \m(r)
+}
+
+#**********************************************************
+#    Special information for the 'echo' based macroses
+#**********************************************************
+# Attribute codes:
+# 00=none 01=bold 04=underscore 05=blink 07=reverse 08=concealed
+#
+# Text color codes:
+# 30=black 31=red 32=green 33=yellow 34=blue 35=magenta 36=cyan 37=white
+# Background color codes:
+# 40=black 41=red 42=green 43=yellow 44=blue 45=magenta 46=cyan 47=white
+#
+# 	 Attribute code
+# 		 |
+# 		 |
+#		 |
+# echo "\o33[2;31m\%1\o33[m"
+#		   |
+# 		   |
+# 		   |
+#   Text/Background color code
+#
+#
+#
+# To break a output string onto multiple lines use the next 
+# workarounds:
+# 
+# echo "ABC\10
+# 	  \13ABC\10
+#	  \13ABC"
+# 
+# or 
+# 
+# echo "ABC\13\10-
+# 	  ABC\13\10-
+#	  ABC"
+#
+# both will print:
+#		 ABC
+#		 ABC
+#		 ABC
+#
+#**********************************************************
+
+#**********************************************************
+# echo_fail kermit macro
+#
+# Macro prints output to the user coloured with red
+# 
+# Parameter in: string to be output in double quotes
+# Parameter out: printed_string
+# Return value: always OK
+# Example: do echo_fail "It is an epic FAIL!"
+#**********************************************************
+define echo_fail {
+	if not defined \%1 {
+		echo "Please, specify input parameter for the macro '\v(macro)'!"
+		echo "Usage: do \v(macro) \"Hello world!\""
+	} else {
+		echo "\o33[1;31m\%1\o33[m"	
+	}
+	
+	return OK
+}
+
+#**********************************************************
+# echo_ok kermit macro
+#
+# Macro prints output to the user coloured with green
+# 
+# Parameter in: string to be output in double quotes
+# Parameter out: printed_string
+# Return value: always OK
+# Example: do echo_ok "It is AWESOME!"
+#**********************************************************
+define echo_ok {
+	if not defined \%1 {
+		echo "Please, specify input parameter for the macro '\v(macro)'!"
+		echo "Usage: do \v(macro) \"Hello world!\""
+	} else {
+		echo "\o33[1;32m\%1\o33[m"
+	}
+	
+	return OK
+}
+
+#**********************************************************
+# echo_info kermit macro
+#
+# Macro prints output to the user coloured with blue
+# 
+# Parameter in: string to be output in double quotes
+# Parameter out: printed_string
+# Return value: always OK
+# Example: do echo_info "0xFAA3 0xFDEA 0xFFFF"
+#**********************************************************
+define echo_info {
+	if not defined \%1 {
+		echo "Please, specify input parameter for the macro '\v(macro)'!"
+		echo "Usage: do \v(macro) \"Hello world!\""
+	} else {
+		echo "\o33[1;34m\%1\o33[m"
+	}
+	
+	return OK
+}
+
+#**********************************************************
+# defSetSerialLine kermit macro
+#
+# Macro is scaning all available serial lines to find out
+# which of it is already in use and which is still not.
+# This macro will appropriately connect kermit to the all
+# 
+# Parameter in: name of the serial line to connect to 
+# 		    /dev/ttyS0, or /dev/ttyS1 
+#		    and speed
+# Parameter out: none
+# Example: do defSetSerialLine [/dev/ttyS0]
+#**********************************************************
+define defSetSerialLine {
+	local m # number of the serial lines
+	local \&b # array of the serial lines names
+	local r
+	local s
+	local c # current serial line on which FASTkit instance is running
+	#.r := OK
+	.c := \v(line)
+	# If serial line name is not specified
+	if defined \%1 {
+		run sudo chmod 666 \%1
+		set line \%1
+		if success {
+			do echo_info "Initializing and launching the FASTkit runtime environment..."
+			do defSetLineConfig
+			if success {
+				do echo_info "Setting serial line \o33[7;47m\v(line)\o33[m"
+				do echo_ok "FASTkit successfully initialized"
+			} else {
+				do echo_fail "Internal error occurred"
+				do echo_info "Exiting FASTkit..."
+
+				exit 1
+			}
+		} else {
+			do echo_fail "Failed to set serial line \o33[7;47m\%1\o33[m\o33[1;31m - internal error occurred\o33[m"
+			do echo_info "Exiting FASTkit..."
+
+			exit 1
+		}
+	} else {
+		do echo_info "The serial line name is not specified\10
+		\13Looking for the first free (in alphabetical order) serial line to connect..."
+		.s := \v(line)
+		.m := \Ffiles(/dev/tty[DSUSB]*,&b)
+		FOR t 1 \m(m) 1 {
+			wait 1
+			if not equal \m(s) \&b[t] {
+				run sudo chmod 666 \&b[t]
+				set line \&b[t]
+				if success {
+					do echo_info "Initializing and launching the FASTkit runtime environment..."
+					do defSetLineConfig
+					if success {
+						do echo_info "Setting serial line \o33[7;47m\v(line)\o33[m"
+						do echo_ok "FASTkit successfully initialized"
+
+						break
+					} else {
+						do echo_fail "Internal error occurred"
+						do echo_info "Exiting FASTkit..."
+
+						exit 1
+					}
+				} else {
+					if equal \m(t) \m(m) {
+						do echo_fail "Not found any free serial line"
+						if not equal \m(c) /dev/tty {
+							do echo_info "Staying at the same line \o33[7;47m\m(c)\o33[m"
+							set line \m(c)
+							do defSetLineConfig
+							if success {
+								do echo_ok "FASTkit successfully initialized"
+
+								break
+							} else {
+								do echo_fail "Internal error occurred"
+								do echo_info "Exiting FASTkit..."
+
+								exit 1
+							}
+						} else {
+							do echo_fail "Invalid serial line \o33[7;47m\v(line)\o33[m"
+							do echo_info "Exiting FASTkit..."
+						
+							exit 1
+						}
+					} else {
+						do echo_info "Keep searching for free serial line..."
+					
+						continue
+					}
+				}
+			} else {
+				continue
+			}
+		}
+	}
+
+	return OK # \m(r)
+}
+
+#**********************************************************
+# defSetSerialLineConfig
+#
+# Macro executes and sets config of the available serial 
+# device to standard settings
+#
+# Parameter in: none
+# Parameter out: none
+# Return value: always OK
+# Example: do defSetLineConfig
+#**********************************************************
+define defSetLineConfig {
+	set carrier-watch off
+	set handshake none
+	set flow-control none
+	do robust
+	set file type binary
+	set file names literal
+	set send pathnames absolute
+	set receive packet-length 9024
+	set send packet-length 9024
+	set window-size 15
+	set background off
+	set terminal lf-display crlf
+	set terminal cr-display normal
+	set suspend on
+	set file character-set utf8
+	#set file character-set ascii
+	set sleep cancellation off
+	set debug message on
+	set terminal type xterm-16color
+	set key \127 \8 # settin' up backspace key in the terminal connection mode
+	set session-log timestamped-text
+	set serial 8N1
+	set exit warning off
+	set editor \$(EDITOR) # by default
+	set browser \$(CCASE_MOZILLA) # by default
+	#set take echo on
+	set prompt {\o33[1;26m(\o33[m\o33[1;47m\v(line)\o33[m\o33[1;26m@\v(speed)kbps | \v(startup)) FASTkit>\o33[m}
+	
+	return OK
+}
+
+#**********************************************************
+# defSetSpeed
+#
+# Macro executes and sets speed of the available serial 
+# device
+#
+# Parameter in: speed
+# Parameter out: none
+# Return value: always OK
+# Example: do defSetSpeed [speed], where the speed is in 
+# the kbps
+#**********************************************************
+define defSetSpeed {
+	local s # speed of the line
+	# checking what is the speed
+	if not defined \%1 {
+		.s := 115200
+		do echo_info "Setting up default speed"
+	} else {
+		switch \%1 {
+			:75,		.s := \%1, break
+			:110,		.s := \%1, break
+			:300,		.s := \%1, break
+			:1200,	.s := \%1, break
+			:2400,	.s := \%1, break
+			:4800,	.s := \%1, break
+			:9600,	.s := \%1, break
+			:19200,	.s := \%1, break
+			:38400,	.s := \%1, break
+			:57600,	.s := \%1, break
+			:115200,	.s := \%1, break
+			:default,	do echo_fail "Bad speed at \o33[7;47m\m(s)\o33[m", do echo_info "Setting up default speed", .s := 115200, break
+		}
+	}
+	set speed \m(s)
+	if success {
+		do echo_info "Setting speed in kbps at \o33[7;47m\m(s)\o33[m"
+	} else {
+		do echo_fail "Cannot set speed in kbps at \o33[7;47m\m(s)\o33[m"
+
+		return FAIL
+	}
+	
+	return OK
+}
+
+#**********************************************************
+# defSetHostConfig
+#
+# Macro executes and sets config of the available host
+# line to standard settings
+#
+# Parameter in: none
+# Parameter out: none
+# Return value: always OK
+# Example: do defSetHostConfig
+#**********************************************************
+define defSetHostConfig {
+	set network type tcp/ip
+	set telnet wait-for-negotiations off
+	do robust
+	set terminal lf-display crlf
+	set terminal cr-display normal
+	set telnet newline-mode nvt off # makes no doubling new-line
+	set telnet terminal type \$(TERM)
+	set file type binary
+	set file names literal
+	set send pathnames absolute
+	set sleep cancellation off
+	set debug message on
+	set terminal type xterm-16color
+	set key \127 \8 # settin' up backspace key in the terminal connection mode
+	set background off
+	set file character-set utf8
+	set editor \$(EDITOR) # by default
+	set browser \$(CCASE_MOZILLA) # by default
+	set exit warning off
+	set prompt {\o33[1;26m(\o33[m\o33[1;47m\v(line)\o33[m\o33[1;26m | \v(startup)) FASTkit>\o33[m}
+
+	return OK
+}
+
+#**********************************************************
+# defSetHost
+#
+# Macro executes and sets config of the available host
+# line to standard settings
+#
+# Parameter in: none
+# Parameter out: none
+# Return value: always OK
+# Example: do defSetHost 192.168.1.2
+#**********************************************************
+define defSetHost {
+	do echo_info "Initializing and launching the FASTkit runtime environment..."
+	do echo_info "Setting host \o33[7;47m\%1\o33[m"
+	do defSetHostConfig
+	set host \%1
+	if success {
+		do echo_ok "FASTkit successfully initialized"
+	} else {
+		do echo_fail "Internal error occurred"
+		do echo_info "Exiting FASTkit..."
+
+		exit 1
+	}
+
+	return OK
+}
+
+#**********************************************************
+# defShowAllIpAddr kermit macro
+#
+# Macro scans the local IP addresses (192.168.1.*) and 
+# check either the device/devices connected or not
+#
+# Parameter in: none
+# Parameter out: printed list of the all available IPs
+# Return value: either OK or FAIL
+# Example: do defShowAllIpAddr
+#**********************************************************
+define defShowAllIpAddr {
+	local i # ping counter
+	local j # num of success pings
+	local t # for() loop counter
+	local r # return value, either OK or FAIL
+	.i := 2 # last digit of pool of local IP' addresses (192.168.1.i)
+	.j := 0
+	.t := 0
+	.r := OK
+	define s 10 # max num of connected devices via Ethernet (from 192.168.1.3 to 192.168.1.10)
+	declare \&a[s] # declaring array of the 10 elements
+	do echo_info "Scanning IP addresses...\10"
+	wait 1
+	while 1 {
+		echo_info "Ping 192.168.1.\m(i)..."
+		run ping -c 4 -i 0.5 -w 2 192.168.1.\m(i) > /dev/null # executing external ping command
+		if success {
+			do echo_ok "Ok..."
+			.j ::= j + 1
+			.\&a[j] := 192.168.1.\m(i)
+		}
+		if > \m(i) \m(s) {
+			if = \m(j) 0 {
+				do echo_fail "Cannot get any IP address"
+			} else {
+				do echo_info "Local IP addresses were succesfully scanned"
+			}
+			break
+		}
+		.i ::= i + 1
+	}
+	if > \m(j) 0 {
+		FOR t 1 \m(j) 1 {
+			do echo_ok "The IP address of the connected device is \o33[7;47m\&a[t]\o33[m"
+		}
+	} else {
+		do echo_fail "Not found any IPs of the connected devices"
+		.r := FAIL
+	}
+	
+	return \m(r)
+}
+
+#**********************************************************
+# defCreateLog kermit macro
+#
+# Macro creates unique dir name (format is 
+# fats_logs_<current date>) in the home directory with
+# rwx rights and then creates a unique name of the log
+# (format is fats_<current date>_<current time>.log) if the
+# path and filename is not specified. If the dir is already 
+# created the log session file is writing to it and no 
+# re-creating of the dir is occuring.
+# If the only filename is specified then it is stored in
+# your home directory.
+#
+#
+# Parameter in: [file_name [path_to_file]]
+# Parameter out: none
+# Return value: either OK or FAIL
+# Example: do defCreateLog [output.log [/tmp/log/]]
+#**********************************************************
+define defCreateLog {
+	local r # return value
+	.r := OK
+
+	# adjusting log engine
+	set input echo off
+	set session-log timestamped-text
+
+	if ( not defined \%1 && not defined \%2 ) {
+		do echo_info "Using default unique file- and pathname!"
+		if directory fats_logs_\v(date) {
+			do echo_info "The folder with name 'fats_logs_\v(date)' in the directory '\v(home)' is already exists - writing the session log file 'fats_\v(date)_\v(time).log' in it"
+			log session	\v(home)fats_logs_\v(date)/fats_\v(date)_\v(time).log
+			if success {
+				do echo_ok "Starting the log session file 'fats_\v(date)_\v(time).log' in the folder '\v(home)fats_logs_\v(date)'"
+			} else {
+				do echo_fail "Cannot start log session file 'fats_\v(date)_\v(time).log' in the folder '\v(home)fats_logs_\v(date)'"
+				.r := FAIL
+			}
+		} else {
+			mkdir \v(home)fats_logs_\v(date)
+			if success {
+				log session	\v(home)fats_logs_\v(date)/fats_\v(date)_\v(time).log
+				if success {
+					do echo_ok "Starting the log session file 'fats_\v(date)_\v(time).log' in the folder '\v(home)fats_logs_\v(date)'"
+				} else {
+					do echo_fail "Cannot start log session file 'fats_\v(date)_\v(time).log' in the folder \v(home)fats_logs_\v(date)"
+					.r := FAIL
+				}
+			} else {
+				do echo_fail "Cannot create the directory 'fats_logs_\v(date)' in the directory '\v(home)'"
+				.r := FAIL
+			}
+		}
+	} else {
+		if not defined \%2 {
+			do echo_info "Using only user defined filename!"
+			log session \v(home)\%1
+			if success {
+				do echo_ok "Starting the log session file '\%1' in the directory '\v(home)'"
+			} else {
+				do echo_fail "Cannot start log session file '\%1' in the directory '\v(home)'"
+				.r := FAIL
+			}
+		} else {
+			# creating the folder by specified path and filename
+			do echo_info "Using user defined both file- and pathname!"
+			mkdir \%2
+			if success {
+				log session \%2\%1
+				if success {
+					do echo_ok "Starting the log session file '\%1' in the folder '\%2'"
+				} else {
+					do echo_fail "Cannot start log session file '\%1' in the folder '\%2'"
+					.r := FAIL
+				}
+			} else {
+				do echo_fail "Cannot create the directory '\%2'"
+				do echo_fail "Maybe you don't have rights to create the directory '\%2'"
+				.r := FAIL				
+			}
+		}
+	}
+	
+	return \m(r)
+}
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# All external API macroses should be all in lower case
+#
+# API: external
+# name: slog
+# description: starts log file
+# usage example: do slog [usr.log [/usr/log/]]
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+define slog {
+	local .r := OK
+
+	do echo_info "Starting log..."
+	.ret := \fexecute(defCreateLog,\%1,\%2)
+
+	return \m(r)
+}
+
+#**********************************************************
+# defShowAllSerialDevices kermit macro
+#
+# Macro prints all the serial devices names which are 
+# available in the system
+#
+# Parameter in: none
+# Parameter out: none
+# Example: do defShowAllSerialDevices
+#**********************************************************
+define defShowAllSerialLines {
+	local i
+	local n
+	local \&a
+	local r # return value
+	.r := OK
+	.i := 1
+	.n := \Ffiles(/dev/tty[DSUSB]*,&a)
+	do echo_info "Searching for serial line devices..."
+	while 1 {
+		wait 1 # wait for 1 second		
+		if > \m(i) \m(n) {
+			do echo_ok "All serial line devices has been found"
+			break
+		} else {
+			do echo_info "\&a[i]"
+		}
+		.i ::= i + 1
+	}
+	
+	return \m(r)
+}
+
+#**********************************************************
+# defShowAllFreeSerialDevices kermit macro
+#
+# Macro gets all the serial devices names which are 
+# available in the system
+#
+# Parameter in: none
+# Parameter out: list_of_all_free_serial_line_devices
+#**********************************************************
+define defShowAllFreeSerialLines {
+	local i
+	local n
+	local \&a # storing all serial line devices names
+	local \&b # 
+	local r # return value
+	local s
+	.i := 0
+	.r := OK
+	.s := \v(line) # saving currently busy line
+	do echo_info "Searching for serial line devices..."
+	.n := \Ffiles(/dev/tty[DSUSB]*,&a) # calculating number of the /dev/tty's
+	FOR t 1 \m(n) 1 {
+		set line \&a[t]
+		if success {
+			if not equal \m(s) \&a[t] {
+				do echo_ok "\&a[t]"
+			} else {
+				continue
+			}
+		}
+		wait 1
+	}
+	set line \m(s) # setting back saved serial line
+	
+	return \m(r)
+}
+
+#**********************************************************
+# defHelloUser kermit macro
+#
+# Macro says hello to the user name defined in the 
+# shell environment variable $USER depending on current 
+# period of day
+#
+# Parameter in: none
+# Parameter out: string_with_hello_user
+# Example: do defHelloUser
+#**********************************************************
+define defHelloUser {
+	local r # return value
+	.r := OK
+	define AmTim 43200
+	define PmTim 61200
+	if < \v(ntime) AmTim {
+		do echo_info "Good Morning, \$(USER)!"
+	} else if < \v(ntime) PmTim {
+		do echo_info "Good Afternoon, \$(USER)!"
+	} else {
+		do echo_info "Good Evening, \$(USER)!"
+	}
+	
+	return \m(r)
+}
+
+#**********************************************************
+# defShowBusySerialLine kermit macro
+#
+# Macro shows currently busy serial line device
+#
+# Parameter in: none
+# Parameter out: name_of_the_serial_line_device
+# Example: do defShowBusySerialLine
+#**********************************************************
+define defShowCurrentConnection {
+	do echo_info "The current connection is \o33[7;47m\v(line)\o33[m"
+	
+	return OK
+}
+
+#**********************************************************
+# defSetShellEnv kermit macro
+#
+# Macro sets the value of the given environment name
+# in the OS shell. If the value is not set and only the 
+# environment name is specififed then this environment
+# destroys.
+#
+# Parameter in: shell_environment_name [shell_environment_value]
+# Parameter out: success or fail
+# Example: do defSetShellEnv BEST_USER [ivan.starodubtsev]
+#**********************************************************
+define defSetShellEnvVal {
+	local r
+	.r := OK
+	if ( not defined \%1 && not defined \%2 ) {
+		do echo_fail "Please, specify input parameters for the macro '\v(macro)'!"
+		do echo_info "Usage: do defSetShellEnv BEST_USER [ivan.starodubtsev]"
+		.r := FAIL
+	} else {
+		if not defined \%2 {
+			do echo_info "Deleting shell environment '\%1'..."
+			putenv \%1
+			if success {
+				do echo_ok "Shell environment '\%1' deleted"
+			} else {
+				do echo_fail "Could not delete shell environment '\%1'"
+				.r := FAIL
+			}
+		} else {
+			do echo_info "Setting environment '\%1' with value '\%2'..."
+			putenv \%1 \%2
+			if success {
+				do echo_ok "Shell environment '\%1' was set with value '\%2' successfully"
+			} else {
+				do echo_fail "Could not set shell environment '\%1' with value '\%2'"
+				.r := FAIL
+			}
+		}
+	}
+	
+	return \m(r)
+}
+
+#**********************************************************
+# defShowShellEnv kermit macro
+#
+# Macro shows the value of the given environment name
+# in the OS shell.
+#
+# Parameter in: shell_environment_name
+# Parameter out: shell_environment_value
+# Example: do defShowShellEnv BEST_USER
+#**********************************************************
+define defShowShellEnvVal {
+	if not defined \%1 {
+		do echo_fail "Please, specify input parameter for the macro '\v(macro)'!"
+		do echo_info "Usage: do defShowShellEnv BEST_USER"
+	} else {
+		do echo_info "\$(\%1)"
+	}
+	
+	return OK
+}
+
+#**********************************************************
+# flines kermit macro
+#
+# Macro shows the value of the given environment name
+# in the OS shell.
+#
+# Parameter in: shell_environment_name
+# Parameter out: shell_environment_value
+# Example: do defShowShellEnv BEST_USER
+#**********************************************************
+define flines {
+	local lines
+	if not define \%1 {
+		do echo_fail "Please, specify input parameter for the macro '\v(macro)'!"
+		do echo_info "Usage: do flines /home/readme.txt"
+	} else {
+		lines := @(cat \%1 | wc -l)
+		do echo_info "The total line number in the \%1 is \o33[7;47\m(lines)\o33[m"
+		
+		return \m(lines)
+	}
+}
+
+#**********************************************************
+# defIpScan kermit macro
+#
+# Macro scans the IPs which were given by the dhcp server
+#
+# Parameter in: none
+# Parameter out: success or fail
+# Example: do defIpScan
+#**********************************************************
+define defIpScan {
+	local \s(ipaddr)		# ip address string
+	.ipaddr := "192.168.1.1"
+	local \s(rnd)		# random number
+	local \s(rndname)		# random file name prefix
+	.rnd := \Frawcommand(echo -n $RANDOM)	# init with the random integer
+	.rndname := "\s(rnd)_fastkit.tmp"		# init the name
+	local \m(len)			# counter of IPs in the tmp file
+	local \&b			# initial list of IPs
+	local \&c			# final list of IPs
+	local \%f			# the open file channel
+	local \s(line)		# read line from the tmp file
+	local \s(ipref)		# reference IP
+	local k			# counter of final list of IPs
+	do echo_info "Scanning IP addresses...\10"
+
+	#do echo_info "!!! The RND filename is \$(HOME)/\s(rndname) !!!\10"
+
+	# showing the last given ip address by dhcp server
+	# performing the Linux shell code
+	run touch $HOME/\s(rndname) # creating the tmp file
+	if success {
+		wait 1
+		run echo -e "\s(ipaddr)\\n\s(ipaddr)" >> $HOME/\s(rndname) # add one redundant line to the tmp file
+		run DATE=$(date +'%b %_d'); cat /var/log/messages | sed -n -e '/eth1/{p;}' | sed -n -e '/DHCPACK/{p;}' | grep -e "$DATE" >> $HOME/\s(rndname) # getting needed strings
+		.len := \Fcommand(sed -n '$=' $HOME/\s(rndname))
+		
+		if > \m(len) 1 {
+			fopen /read \%f \$(HOME)/\s(rndname) # opening the tmp file for reading
+			if success {
+				array declare \&b[\m(len)] # creating array of size of read lines from the tmp file
+				array declare \&c[\m(len)] # creating second array of the IPs
+				array set \&c \s(ipaddr) # setting the value of second list to the \s(ipaddr)
+				.len := 0
+				.ipref := \s(ipaddr)
+				while not \F_eof(\%f) {
+					fread /line \%f line # reading the file line by line
+					if success {
+						.ipaddr := \Fipaddress(\s(line),1) # extracting all available IPs from the string line
+						.len ::= len + 1
+						.\&b[len] := \s(ipaddr) # saving extracted value
+					} else {
+						fclose \%f
+						delete /list \$(HOME)/\s(rndname)
+						#do defFileDelete \$(HOME)/\s(rndname)
+						do echo_fail "Internal error occurred"
+						return FAIL
+					}
+				}
+				array sort /key:1 \&b # sorting the array of IPs
+				.k := 0
+				FOR cnt 1 \m(len) 1 {
+					if not equal \&b[cnt] \s(ipref) {
+						.ipref := \&b[cnt]
+						run ping -c 4 -i 0.5 -w 2 \s(ipref) > /dev/null
+						if success {
+							.k ::= k + 1
+							.\&c[k] := \s(ipref)
+						}
+					} else {
+						continue
+					}
+				}
+				if >= \m(k) 1 {
+					FOR cnt 1 \m(k) 1 {
+						do echo_info "#\m(cnt) IP->\&c[cnt]\10"
+					}
+					fclose \%f
+					delete /list \$(HOME)/\s(rndname)
+					return OK
+				} else {
+					do echo_info "No IPs have been leased\10"
+					fclose \%f
+					delete /list \$(HOME)/\s(rndname)
+					#do defFileDelete \$(HOME)/\s(rndname)
+					return OK		
+				}
+			} else {
+				do echo_fail "Internal error occurred"
+				fclose \%f
+				delete /list $HOME/\s(rnd)_fastkit.tmp
+				#do defFileDelete \$(HOME)/\s(rndname)
+				return FAIL
+			}
+			##fclose \%f
+			##delete /list $HOME/\s(rnd)_fastkit.tmp
+			##return OK
+		} else {
+			do echo_info "No IPs have been leased\10"
+			fclose \%f
+			delete /list $HOME/\s(rndname)
+			#do defFileDelete \$(HOME)/\s(rndname)
+			return OK
+		}
+	} else {
+		do echo_fail "Internal error occurred"
+		return FAIL
+	}
+}
+
+define defFileDelete {
+	fclose \%1
+	if success {
+		delete /list \%1
+		if success {
+			return OK
+		} else {
+			do echo_fail "Could not delete \%1 file"
+			return FAIL
+		}
+	} else {
+		do echo_fail "Could not close \%1 file"
+		return FAIL
+	}
+}
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# !!! All external API macroses should be all in lower case
+#
+# API: external
+# name: ipscan
+# description: scans the valid IP's of the connected 
+#	       devices
+# usage example: do ipscan
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+define ipscan {
+	local ret
+	.ret := \fexecute(defIpScan)
+
+	return \m(ret)
+}
+
+#**********************************************************
+#				End of file
+#**********************************************************

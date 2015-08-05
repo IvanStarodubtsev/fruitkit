@@ -1,0 +1,248 @@
+#!/usr/bin/kermit +
+
+#**********************************************************
+#	  C-Kermit custom initialisation script
+#**********************************************************
+
+#******** Global return values for all macrolib ***********
+define OK 0
+define FAIL 1
+
+local p				# path where the FASTkit is installed
+local \&a			# array to store the names of the FASTkit files
+local n				# number of files in the directory
+local \&d			# array to store the name of the FASTkit source dirs
+local i				# number of directories in the FASTkit source dirs
+
+local \s(sdev)
+.sdev := "/dev/"
+
+local \s(shlib)			# shell lib name
+.shlib := "/shlib"		# shell lib name directory
+
+local \s(fastkitdir)		# fastkit dir holder
+
+# workaday opts
+local \s(hopt)			# help option
+.hopt := "--help"		# defining the string for help option
+local \s(lineopt)		# serial line option
+.lineopt := "--line"		# defining the string for serial line option
+local \s(rateopt)		# speed rate option
+.rateopt := "--rate"
+local \s(ipopt)			# ip host option
+.ipopt := "--ip"		# defining the string for ip host option
+local \s(scanopt)		# scanning option
+.scanopt := "--scan"		# option for scanning IP addresses
+local \s(updateopt)		# update option
+.updateopt := "--update"	# option for updating the FASTkit
+
+# experimental opts
+local \s(testopt)		# test scripts option
+.testopt := "--test"		# defining the string for test option
+local \s(binddevopt)		# binded device option
+.binddevopt := "--bind"		# option for controlling binded devices
+
+local ret			# return value of the macro called via \Fexecute()
+
+local \%s
+
+.fastkitdir := \Fstripx(\%0,/)	# figuring out what is the dir where are we
+
+# Initializing all library components and loading all
+# its parts (macrolib, testcore, myhelp etc) which are in the
+# install directory
+.p := \Fstripx(\%0,/) 		# figuring out what is the dir where are we
+.i := \Fdirectories(\m(p)/*,&d) # figuring out what are the files in
+
+# Including all FASTkit dependency files in all dirs
+FOR q 1 \m(i) 1 {
+	if equal \&d[q] "\s(fastkitdir)\s(shlib)" { # concatenate string arguments
+		continue
+	} else {
+		.n := \Ffiles(\&d[q]/*,&a)
+		FOR t 1 \m(n) 1 {
+			take \&a[t] # including all files to the kermit runtime environment
+			if success {
+				continue
+			} else {
+				do echo_fail "Cannot update the \o33[7;47m\&a[t]\o33[m file"
+				do echo_fail "Internal error occurred"
+				do echo_info "Exiting FASTkit..."
+
+				exit FAIL
+			}
+		}
+	}
+}
+
+do defHelloUser # echo the user invitation
+
+if not defined \%1 {
+	# if there is no option in the command line echo the short help
+	do echo_info "\13\32\10Please, specify one of the option:\10
+	\13-i for any existent ip address\10
+	\13-s for any existent serial line device\10
+	\13\32\10
+	\13Examples: $ fastkit -i 192.168.1.5\10
+	\13          $ fastkit -l /dev/ttyS0\10
+	\13          $ fastkit -s\10
+	\13\32\10
+	\13Common syntax: fastkit -i ip				- ip-address is mandatory parameter\10
+	\13               fastkit -l [device] [-r speed]	- connecting to the serial line device (device-name can be omitted - it is optional parameter)\10
+	\13               fastkit -s					- scanning the last leased ip-addresses by dhcp for external devices\10
+	\13               fastkit -u					- update FASTkit\10
+	\13\32\10
+	\13Also try --help or -h for initial help"
+	do echo_info "Exiting FASTkit..."
+
+	exit OK
+} else {
+	#####################################################
+	# -h option: -h, --h, -help, --help with no argument
+	#####################################################
+	# Using the built-in string substitution - if ( equal \%1 "--help" || equal \%1 "help" || equal \%1 "-h" || equal \%1 "h" )
+	if ( equal \%1 \s(hopt) || equal \%1 \s(hopt[3:4]) || equal \%1 \s(hopt[2:2]) || equal \%1 \s(hopt[3:1]) ) {
+		do echo_info "\13\32\10FASTkit help:\10
+		\13To start the FASTkit instance you can enter\10
+		\13the name of the alias 'fastkit' anywhere\10
+		\13(in the shell of course) you want with the\10
+		\13following options:\10
+		\13-i for connecting to the host name by Ip-address\10
+		\13-l for connecting to the serial Line device\10
+		\13-s for Scanning the last leased ip-adresses by dhcp server\10
+		\13\32\10
+		\13Examples: $ fastkit -i 192.168.1.5  - trying to connect to the host with ip-address 192.168.1.5\10
+		\13          $ fastkit -l [/dev/ttyS0] - trying to connect to the specified /dev/ttyS0\10
+		\13          $ fastkit -s              - printing all last leased ip-adresses by dhcp\10
+		\13\32\10
+		\13To use the advanced help system enter the FASTkit\10
+		\13(type in the shell 'fastkit') and then type\10
+		\13in the FASTkit runtime environment 'myhelp' and press 'Enter'"
+		do echo_info "Exiting FASTkit..."
+
+		exit OK
+	} else {
+		###############################################
+		# -i ip option: ip argument is obligatory
+		###############################################
+		if ( equal \%1 \s(ipopt[2:2]) || equal \%1 \s(ipopt) ) {
+			if not defined \%2 {
+				do echo_fail "The argument for \%1 option is not specified"
+				do echo_info "Exiting FASTkit..."
+
+				exit FAIL
+			} else {
+				# setting the tcp/ip host with its config
+				do defSetHost \%2
+			}
+		###############################################
+		# -l [device] [-r speed] options: device 
+		# argument is optional, -r option with speed 
+		# argument is optional
+		###############################################
+		} else if ( equal \%1 \s(lineopt[2:2]) || equal \%1 \s(lineopt) ) {
+			# -l -r <speed> options scheme
+			if defined \%2 {
+				if ( equal \%2 \s(rateopt[2:2]) || equal \%2 \s(rateopt) ) {
+					if defined \%3 {
+						do defSetSerialLine
+						do defSetSpeed \%3
+					} else {
+						do echo_fail "The argument for -\%2 option is not specified"
+						do echo_info "Exiting FASTkit..."
+
+						exit FAIL
+					}
+				# -l <device> -r <speed> options scheme
+				} else {
+					if defined \%3 {
+						if ( equal \%3 \s(rateopt[2:2]) || equal \%3 \s(rateopt) ) {
+							if defined \%4 {
+								do defSetSerialLine \%2
+								do defSetSpeed \%4
+							} else {
+								do echo_fail "The argument for -\%3 option is not specified"
+								do echo_info "Exiting FASTkit..."
+
+								exit FAIL
+							}
+						} else {
+							do echo_fail "\13\32\10Unknown option \%3: please, specify one of the valid options:\10
+							\13-r for setting the Rate of speed of the connection\10"
+							do echo_info "Exiting FASTkit..."
+
+							exit FAIL
+						}
+					# -l <device> option scheme					
+					} else {
+						do defSetSerialLine \%2
+						do defSetSpeed
+					}
+				}
+			# -l option scheme
+			} else {		
+				do defSetSerialLine
+				do defSetSpeed
+			}
+		###############################################
+		# -s option: -s with no argument
+		###############################################
+		} else if ( equal \%1 \s(scanopt[2:2]) || equal \%1 \s(scanopt) ) {
+			.ret := \Fexecute(defIpScan)
+			do echo_info "Exiting FASTkit..."
+			if = \m(ret) OK {
+				exit OK
+			} else {
+				exit FAIL
+			}
+		###############################################
+		# -u update kit option: -u with no argument
+		###############################################
+		} else if equal \%1 \s(updateopt[2:2]) {
+
+			do echo_info "Updating FASTkit"
+			do updatekit
+			do echo_info "Exiting FASTkit..."
+
+			exit OK
+		###############################################
+		# -t ONLY FOR TESTING THE OPTIONS PARSER
+		###############################################
+		} else if ( equal \%1 \s(testopt[2:2]) || equal \%1 \s(testopt) ) {
+			
+			local \&a[] # array for values of the arguments
+			local \&b[]	# array for the name of arguments
+			local num	# num of arguments
+			local \%j
+
+			.num ::= \v(argc) - 1
+			declare \&a[\m(num)]
+			#declare \&b[\m(num)] = "a" "aa" "aaa" "aaaa"
+			#show array \&b
+			echo "script name \%0"
+			echo "total num of args \m(num)"
+			
+			FOR \%i 1 \m(num) 1 {
+				.\%j := \fsplit(\&_[\%i],&a,\61,ALL)
+				echo "\flpad(\%i,5).   [\&_[\%i]] argument is \&a[\%j - 1] and value is \&a[\%j]"
+			}
+
+			exit OK
+		###############################################
+		# -b
+		###############################################
+		} else {
+			do echo_fail "\13\32\10Unknown option \%1: please, specify one of the valid options:\10
+			\13-i for any existent Ip address\10
+			\13-l for any existent serial Line device\10
+			\13-s for Scanning the last of the leased ip-adresses by dhcp server"
+			do echo_info "Exiting FASTkit..."
+
+			exit FAIL
+		}
+	}
+}
+
+#**********************************************************
+#				End of file
+#**********************************************************

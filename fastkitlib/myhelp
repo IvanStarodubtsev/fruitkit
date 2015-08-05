@@ -1,0 +1,65 @@
+###########################################################
+#			User help system
+###########################################################
+
+#**********************************************************
+# myhelp kermit macro
+#
+# Macro prints output to the user coloured with red
+# 
+# Parameter in: string to be output in double quotes
+# Parameter out: printed_string
+# Return value: always OK
+# Example: do echo_fail "It is an epic FAIL!"
+#**********************************************************
+define myhelp {
+	if not defined \%1 {
+		do echo_info "FASTkit help system\10"
+		do echo_info "Usage: myhelp [macro_name]\10\10
+		\13The list of the available user defined macros\10\10
+		\13--- Starting connection mode macros:\10
+		\13cc->entering connect mode\10
+		\13ee->exiting FASTkit\10\10
+		\13--- Logging & storing macros:\10
+		\13defCreateLog->creating log\10\10
+		\13--- Serial line configuration macros:\10
+		\13defSetSerialLine\10
+		\13defShowAllFreeSerialLines\10
+		\13defShowAllSerialLines\10
+		\13defShowBusySerialLine\10\10
+		\13--- IP/Ethernet macros:\10
+		\13defShowAllIpAddr\10\10
+		\13--- Shell environments macros:\10
+		\13defSetShellEnvVal\10
+		\13defShowShellEnvVal\10\10
+		\13--- Mantis & Bugzilla connection macros:\10
+		\13mantis\10
+		\13bugzilla\10\10
+		\13--- Updating FASTkit macros:\10
+		\13updatekit\10"
+		return OK
+	} else {
+		goto \%1
+		:defCreateLog
+			do echo_info "This macro creates log file of the user/script driven session\10
+			\13which is recording after FASTkit enters in the 'connect' state.\10
+			\13Usage: do defCreateLog [output.txt [/tmp/logs]]\10
+			\13Notes:\10
+			\13 1. If no folder where to store the log file is specified this macro\10
+			\13    will create and store the specified filename in your home directory.\10
+			\13 2. If both arguments are not specified this macro will create the\10
+			\13    unique folder and filename in your home directory with the next\10
+			\13    pattern - /home/<user>/fats_logs_<current_date>/fats_<current_date>_<current_time>.log.\10"
+			return OK
+		:defSetSerialLine
+			do echo_info "This macro sets serial line with its further initialization\10
+			\13based on single configuration.\10
+			\13\10"
+			return OK
+	
+	
+	
+	
+	}
+}
+

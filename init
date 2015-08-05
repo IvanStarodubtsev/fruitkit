@@ -1,0 +1,260 @@
+#!/usr/bin/env bash
+
+#*********************---------------**********************
+#*********************|   FASTkit   |**********************
+#*********************---------------**********************
+#[global error codes]
+OK=0
+FAIL=1
+
+#[kermit shabang]
+#KERMIT_SHABANG=$(which kermit)
+
+#[environment variables]
+FASTKIT_ALIAS_ENV="fastkit"
+FASTKIT_PREFIX="FASTKIT"
+FASTKIT_INSTALL_DIR_ENV=${FASTKIT_PREFIX}"_INSTALL_DIR"
+FASTKIT_SHARE_DIR_ENV=${FASTKIT_PREFIX}"_SHARE_DIR"
+FASTKIT_SHELL_ENV=${FASTKIT_PREFIX}"_SHELL"
+
+#[FASTkit regular expressions]
+FASTKIT_ENV_REG_EXP=$FASTKIT_PREFIX
+FASTKIT_ALIAS_REG_EXP=$FASTKIT_ALIAS_ENV
+
+#[options]
+INSTALL_DIR_OPTION="p"                          # option of the install directory path
+ACTION_OPTION="a"                               # option of the action to perform
+HELP_OPTION="h"                                 # help option
+
+#[filenames and directories]
+FASTKIT_DIR=".fastkit"
+FASTKIT_INIT_FILE="fastkitrc"
+BASH_PROFILE=".bash.${USER}"                    # bash custom profile
+LOG_MESSAGES="/var/log/messages"                # kernel messages
+LINUX_TEMP="/mnt/linux_temp"                    # linux_temp directory
+FASTKIT_CURRENT_DIR=${0%%/${0##*/}}             # fastkit install package relative directory
+FASTKIT_SHARE_DIR="$LINUX_TEMP/$FASTKIT_DIR"    # fastkit share directory from which it should be installed
+
+#[other and uninitialised variables]
+INSTALL_DIR=                            # directory to install/uninstall FASTkit
+ACTION=                                 # action to do for FASTkit - install/uninstall
+RESULT=                                 # result of the expression
+NO_PATH=
+
+function create_profile_fn()
+{
+    echo "Creating user custom profile file with name $BASH_PROFILE..."
+
+    return
+}
+
+# Name: install_fn()
+# Desc: performs insallation of the FASTkit package into the system
+# Note: -
+function install_fn()
+{
+    echo "Installing FASTkit..."
+    if [ -f $HOME/$BASH_PROFILE ]
+    then
+        INSTALL_DIR=$INSTALL_DIR/$FASTKIT_DIR
+        if [ -d $INSTALL_DIR ]
+        then
+            echo "Directory $INSTALL_DIR is already created: installing FASTkit in it"
+        else
+            echo "Creating directory $INSTALL_DIR: installing FASTkit in it"
+            mkdir -p -v $INSTALL_DIR
+        fi
+        echo "The current directory for the FASTkit installation package is $FASTKIT_CURRENT_DIR"
+        RESULT=$(cat $HOME/$BASH_PROFILE | sed -n -e "/$FASTKIT_ALIAS_REG_EXP/{=;}" -e "/$FASTKIT_ENV_REG_EXP/{=;}")
+        if [ "$RESULT" = "" ]
+        then
+            echo "Adding alias 'fastkit' and FASTkit environment variables to the shell environment"
+            echo -e "\nexport $FASTKIT_SHARE_DIR_ENV=$FASTKIT_SHARE_DIR" >> $HOME/$BASH_PROFILE
+            echo "export $FASTKIT_INSTALL_DIR_ENV=$INSTALL_DIR" >> $HOME/$BASH_PROFILE
+            echo -e "alias fastkit=$INSTALL_DIR/$FASTKIT_INIT_FILE\n" >> $HOME/$BASH_PROFILE
+        else
+            echo "Alias 'fastkit' and FASTkit environment variables are already added to the shell environment"
+        fi
+        for OBJECT in $(ls $FASTKIT_CURRENT_DIR)
+        do
+            if [ "$OBJECT" = "${0##*/}" ]
+            then
+                echo "init script file is: $OBJECT - skipping it"
+                continue
+            else
+                cp -rf -v $FASTKIT_CURRENT_DIR/$OBJECT $INSTALL_DIR
+            fi
+        done
+        if [ -f $LOG_MESSAGES ]
+        then
+            sudo chown $USER $LOG_MESSAGES
+        else
+            echo "There is no $LOG_MESSAGES file: cannot change the owner to $USER"
+            echo "Due to this some functionality may be absent"
+        fi
+        echo "Success: FASTkit is installed"
+        source $HOME/$BASH_PROFILE
+    else
+        echo "There is no file $BASH_PROFILE: creating it"
+        #touch $HOME/$BASH_PROFILE
+        #echo "#!/bin/bash" >> $HOME/$BASH_PROFILE
+    fi
+
+    return
+}
+
+function uninstall_fn()
+{
+    echo "Uninstalling FASTkit..."
+    if [ -f $HOME/$BASH_PROFILE ]
+    then
+        RESULT=$(cat $HOME/$BASH_PROFILE | sed -n "/$FASTKIT_INSTALL_DIR_ENV=/{=;}")
+        if [ "$RESULT" = "" ]
+        then
+            echo "There is no reference to the \$FASTKIT_INSTALL_DIR environment variable"
+            echo "Fail: FASTkit is not uninstalled"
+        else
+            UNINSTALL_DIR=$FASTKIT_INSTALL_DIR
+            if [ -d $UNINSTALL_DIR ]
+            then
+                echo "Removing directory $UNINSTALL_DIR"
+                rm -rf -v $UNINSTALL_DIR
+            else
+                echo "Directory $UNINSTALL_DIR is already removed"
+            fi
+            if [ -f $LOG_MESSAGES ]
+            then
+                sudo chown root $LOG_MESSAGES
+            else
+                echo "There is no $LOG_MESSAGES file: cannot change the owner back to root"
+            fi
+            for ENV in $(env | grep -e "\<$FASTKIT_PREFIX.*\>" | cut -d'=' -f 1)
+            do
+                echo "unset env: $ENV"
+                unset $ENV
+            done
+            RESULT=$(cat $HOME/$BASH_PROFILE | sed -n -e '/fastkit/{=;}' -e '/FASTKIT/{=;}')
+            if [ "$RESULT" = "" ]
+            then
+                echo "There is no reference to the alias 'fastkit' and FASTkit environment variables"
+                echo "Fail: FASTkit is not uninstalled"
+            else
+                echo "Removing alias 'fastkit' and FASTkit environment variables from the shell environment"
+                sed -i -e '/fastkit/d' -e '/FASTKIT/d' $HOME/$BASH_PROFILE
+                sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' $HOME/$BASH_PROFILE
+                source $HOME/$BASH_PROFILE
+                echo "Success: FASTkit is uninstalled"
+            fi
+        fi
+    else
+        echo "There is no file $HOME/$BASH_PROFILE: cannot uninstall FASTkit"
+        echo "Fail: FASTkit is not uninstalled"
+    fi
+
+    return
+}
+
+###########################################################
+# Processing the options given in a command line
+# with an:
+# -h (no argument) for help,
+# -p <path> for choosing the path to install
+#    the FASTkit,
+# -a <action> for choosing the action to
+#    do - install/uninstall.
+###########################################################
+while getopts ": $HELP_OPTION $INSTALL_DIR_OPTION: $ACTION_OPTION:" OPTION
+    do
+        case $OPTION in
+
+            # saving the -p option argument
+            "$INSTALL_DIR_OPTION")
+                INSTALL_DIR=$OPTARG
+                echo "INSTALL_DIR: $INSTALL_DIR"
+                #if [ "$INSTALL_DIR" != "$NO_PATH" ]
+                if [ -z "$INSTALL_DIR" ]
+                then
+                    echo "The -$INSTALL_DIR_OPTION option is not specified"
+                    echo "!!! Fail: FASTkit is not installed"
+                    exit $FAIL #1
+                else
+                    echo "!!! The -$INSTALL_DIR_OPTION option value: $INSTALL_DIR"
+                fi
+                #echo "The -$INSTALL_DIR_OPTION option value: $INSTALL_DIR"
+                ;;
+
+            # saving the -a option argument
+            "$ACTION_OPTION")
+                ACTION=$OPTARG
+                if [ "$ACTION" = "install" ] || [ "$ACTION" = "uninstall" ]
+                then
+                    echo "The -$ACTION_OPTION option value: $ACTION"
+                else
+                    echo "Unknown action '$ACTION' for -$ACTION_OPTION option"
+                    echo "Fail: FASTkit is not installed"
+                fi
+                ;;
+
+            # showing the help if -h option choosen
+            "$HELP_OPTION")
+                echo -e "\nUse the -p option for choosing the installation directory
+                        \rand -a option to choose the action to do - 'install' or 'uninstall',
+                        \rto install or uinstall FASTkit respectively.\n
+                        \rExample: $ $0 -a install -p $HOME, or
+                        \r         $ $0 -a uninstall\n
+			\rNote: FASTkit will create an it's own installation directory
+			\r      inside specified directory
+			\r"
+                exit $OK #0
+                ;;
+
+            # controlling the unknown options
+            "?")
+                echo "Unknown option for -$OPTARG"
+                echo "Fail: FASTkit is not installed"
+                exit $FAIL #1
+                ;;
+
+            # controls the -a and -p options and warns if there is no argument following them
+            ":")
+                echo "No argument value for option -$OPTARG"
+                echo "Fail: FASTkit is not installed"
+                exit $FAIL #1
+                ;;
+
+            # internal error
+            *)
+                echo "Unknown error while processing the options in $0"
+                echo "Fail: FASTkit is not installed"
+                exit $FAIL #1
+                ;;
+        esac #case $OPTION in
+    done #while getopts ": $HELP_OPTION $INSTALL_DIR_OPTION: $ACTION_OPTION:" OPTION
+
+if [ "$ACTION" = "install" ] #&& [ "$INSTALL_DIR""$ABC" != "$ABC" ]
+then
+    install_fn
+elif [ "$ACTION" = "uninstall" ]
+then
+    uninstall_fn
+else
+    #echo "Unknown action $ACTION for -$ACTION_OPTION"
+    echo "Fail: Please, specify the required options given below"
+    echo -e "\nUse the -p option for choosing the installation directory
+                        \rand -a option to choose the action to do - 'install' or 'uninstall',
+                        \rto install or uinstall FASTkit respectively.\n
+                        \rExample: $ $0 -a install -p $HOME, or
+                        \r         $ $0 -a uninstall\n
+			\rNote: FASTkit will create an it's own installation directory
+			\r      inside specified directory
+                        \r"
+fi
+
+echo "Done: Exiting..."
+
+exec $SHELL
+
+#*********************---------------**********************
+#*********************| End of file |**********************
+#*********************---------------**********************
+

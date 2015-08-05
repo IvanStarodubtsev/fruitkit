@@ -1,0 +1,44 @@
+#**********************************************************
+# Test engine script for the FASTkit
+#**********************************************************
+
+#**********************************************************
+# testcore kermit macro
+#
+# Macro performs
+#
+# Parameter in: [s1 [s2]], where s1=string of the path to 
+#               test script file, s2=string of the path to
+#               output report.
+# Parameter out: none
+# Return value: either OK or FAIL
+# Example: do testcore [/home/fastkit/test_script.txt [/usr/reports/report.txt]]
+#**********************************************************
+define testcore {
+	local r # return value
+	.r := OK
+
+
+	if not defined \%1 {
+		do echo_info "Warning: starting testcore with default test script"
+
+
+
+
+
+	} else {
+		while 1 {
+			echo "This is a testcore too"
+			break
+		}
+	}
+	
+	
+	
+	
+	
+	
+	
+	return \m(r)
+}
+

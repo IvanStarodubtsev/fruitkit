@@ -1,0 +1,64 @@
+#!/bin/bash
+# bash completion for fastkit
+
+FASTKIT_ALIAS=fastkit
+
+#SERIAL_LINE_DEVS=$(dmesg | sed -n -e "/\<tty/{p;}" | grep -w -o tty.[A-Z]*[0-9] | sed -n -e "/tty/p" | sort | uniq)
+#echo $SERIAL_LINE_DEVS
+#for DEVS in $SERIAL_LINE_DEVS
+#do
+#	DEVS=/dev/$DEVS
+#	if [ -e $DEVS ]
+#	then
+#		echo "$DEVS"
+#	fi
+#done
+
+# available fastkit options
+__fastkit_opts="-l	-r	-s	-i	-u		-h
+		--line	--rate	--scan	--ip	--update	--help"
+
+# show all available short options
+_show_opts ()
+{
+	COMPREPLY=()
+
+	local cur=${COMP_WORDS[COMP_CWORD]}
+	
+	if [[ ${COMP_CWORD} = 1  ]];
+	then
+		COMPREPLY=($(compgen -W "$__fastkit_opts" -- $cur))
+		return 0
+	fi
+
+	#echo "COMP_CWORD = ${COMP_CWORD}"
+
+	if [[ ${COMP_CWORD} = 2 ]];
+	then
+		case ${COMP_WORDS[COMP_CWORD-1]} in
+			-l | --line)
+				COMPREPLY=($(compgen -W "/dev/X /dev/Y /dev/Z" -- $cur))
+				return 0
+			;;
+		esac
+	fi
+
+}
+complete -F _show_opts $FASTKIT_ALIAS
+
+
+
+
+
+# show line options
+#_show_line_opt ()
+#{
+#	SERIAL_LINE_DEVS=$(dmesg | sed -n -e "/\<tty/{p;}" | grep -w -o tty.[A-Z]*[0-9] | sed -n -e '/tty/p' | sort | uniq)
+#	COMPREPLY=()
+#}
+#complete -F _show_line_opt -o filenames $FASTKIT_ALIAS
+
+# show rate options
+
+
+

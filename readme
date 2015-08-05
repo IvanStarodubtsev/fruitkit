@@ -1,0 +1,17 @@
+PLEASE, READ THIS FIRST!
+
+This folder contains C-Kermit (automation-in-communication)
+utility start-up, custom settings and special designed 
+scripts which are the part of the FASTkit (Factory 
+Application Semi-automated Test kit).
+
+Before starting to use this set of scripts for Factory 
+Application see the related documentation. This
+documentation can be found on the Echostar Europe
+SharePoint intranet webpage http://europe-eng/projects/h93/default.aspx
+in the Software Documents section - Factory Application
+Semi-automated Test kit.doc.
+
+This set of scripts has been designed only for Factory
+Application needs and not suitable for other Echostar
+Europe projects.
