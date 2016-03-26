@@ -1,5 +1,11 @@
 #!/usr/bin/kermit +
 
+# As an alternative and much proper solution it is better to have next shell function:
+# function fastkit() {
+# 	( /usr/bin/env kermit + /home/starodubtsev/.fastkit/fastkitrc $@ )
+# }
+# and remove shabang line for kermit
+
 #**********************************************************
 #	  C-Kermit custom initialisation script
 #**********************************************************
